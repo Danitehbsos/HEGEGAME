@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Aknakereső – Cyber Neon Edition (HEGE Hordó Verzió v3.0)</title>
+
+<style>
+    body {
+        margin: 0;
+        background: radial-gradient(circle at top, #0a0f1f, #000);
+        font-family: "Segoe UI", sans-serif;
+        color: #00eaff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        overflow-x: auto;
+    }
+
+    h1 {
+        font-size: 44px;
+        margin-bottom: 5px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 20px #00eaff;
+        text-align: center;
+    }
+
+    #hud {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 20px;
+        text-shadow: 0 0 10px #00eaff;
+    }
+
+    .stats-row {
+        display: flex;
+        gap: 30px;
+    }
+
+    .difficulty-container {
+        margin: 15px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .diff-btn {
+        padding: 10px 18px;
+        background: transparent;
+        border: 1px solid #00eaff;
+        color: #00eaff;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s;
+        font-weight: bold;
+    }
+
+    .diff-btn:hover, .diff-btn.active {
+        background: rgba(0, 234, 255, 0.2);
+        box-shadow: 0 0 15px #00eaff;
+    }
+
+    #board {
+        display: grid;
+        gap: 4px;
+        margin-top: 25px;
+        padding: 15px;
+        background: rgba(0, 255, 255, 0.05);
+        border-radius: 15px;
+        box-shadow: 0 0 25px rgba(0,255,255,0.2);
+        backdrop-filter: blur(4px);
+        transition: 0.3s;
+        max-width: 100%;
+        overflow: auto;
+    }
+
+    .cell {
+        width: 40px;
+        height: 40px;
+        background: #111827;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: 0.2s;
+        user-select: none;
+        box-shadow: inset 0 0 8px rgba(0,255,255,0.1);
+    }
+
+    .cell:hover {
+        background: #1f2937;
+        transform: scale(1.08);
+        box-shadow: 0 0 12px rgba(0,255,255,0.4);
+    }
+
+    .revealed {
+        background: #0d1117 !important;
+        transform: scale(1);
+        cursor: default;
+        box-shadow: inset 0 0 12px rgba(0,255,255,0.3);
+        animation: flip 0.25s ease;
+    }
+
+    @keyframes flip {
+        0% { transform: rotateX(90deg); }
+        100% { transform: rotateX(0deg); }
+    }
+
+    .mine {
+        background: #b30000 !important;
+        animation: shake 0.3s;
+    }
+
+    @keyframes shake {
+        0% { transform: translate(0,0); }
+        25% { transform: translate(3px, -3px); }
+        50% { transform: translate(-3px, 3px); }
+        75% { transform: translate(3px, 3px); }
+        100% { transform: translate(0,0); }
+    }
+
+    .flag {
+        color: #ffeb3b;
+        text-shadow: 0 0 8px #ffeb3b;
+    }
+
+    #newGame {
+        margin-top: 10px;
+        padding: 12px 25px;
+        background: #00eaff;
+        border: none;
+        border-radius: 10px;
+        font-size: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.2s;
+        color: #000;
+    }
+
+    #newGame:hover {
+        background: #00bcd4;
+        transform: scale(1.05);
+        box-shadow: 0 0 15px #00eaff;
+    }
+
+    /* Cyber Segítség Panel - HEGE Kiadás */
+    #cyber-helper {
+        margin-top: 25px;
+        padding: 15px;
+        background: rgba(255, 0, 170, 0.1);
+        border: 1px solid #ff00aa;
+        border-radius: 10px;
+        width: 100%;
+        max-width: 550px;
+        text-align: center;
+        box-shadow: 0 0 15px rgba(255, 0, 170, 0.2);
+    }
+
+    #cyber-helper h3 {
+        margin: 0 0 10px 0;
+        color: #ff00aa;
+        text-shadow: 0 0 10px #ff00aa;
+    }
+
+    .helper-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid #ff00aa;
+        color: #fff;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 14px;
+        text-align: left;
+    }
+
+    .helper-btn:hover {
+        background: #ff00aa;
+        color: #000;
+        box-shadow: 0 0 10px #ff00aa;
+    }
+
+    .n1 { color: #00eaff; }
+    .n2 { color: #00ff88; }
+    .n3 { color: #ffdd00; }
+    .n4 { color: #ff8800; }
+    .n5 { color: #ff4444; }
+    .n6 { color: #ff00aa; }
+    .n7 { color: #bb00ff; }
+    .n8 { color: #ffffff; }
+</style>
+</head>
+
+<body>
+
+<h1>AKNAKERESŐ – THE BIG HORDO EDITION</h1>
+
+<div class="difficulty-container">
+    <button class="diff-btn active" onclick="setDifficulty('easy')">HEGE Mód (Kis Hordó: 10x10)</button>
+    <button class="diff-btn" onclick="setDifficulty('medium')">Roblox Pro (Közepes Hordó: 16x16)</button>
+    <button class="diff-btn" onclick="setDifficulty('hard')">KRESZ Vizsga (Gigantikus Hordó: 22x22)</button>
+</div>
+
+<div id="hud">
+    <div id="status">Kattints bárhova a biztos sikerhez!</div>
+    <div class="stats-row">
+        <div id="timer">Idő: 0s</div>
+        <div id="mineCount">Aknák: 0</div>
+    </div>
+</div>
+
+<button id="newGame">Új játék</button>
+
+<div id="board"></div>
+
+<div id="cyber-helper">
+    <h3>🛢️ HEGE, a Hordó Méretű Gamer Kajakirály</h3>
+    <p id="helper-text">Indítsd el a játékot az elemzéshez!</p>
+    <div id="helper-options"></div>
+</div>
+
+<script>
+const boardEl = document.getElementById("board");
+const statusEl = document.getElementById("status");
+const timerEl = document.getElementById("timer");
+const mineCountEl = document.getElementById("mineCount");
+const newGameBtn = document.getElementById("newGame");
+const helperText = document.getElementById("helper-text");
+const helperOptions = document.getElementById("helper-options");
+
+// Megnövelt pályaméretek!
+let currentConfig = { rows: 10, cols: 10, mines: 12, level: 'easy' };
+let board = [];
+let gameOver = false;
+let firstClick = true;
+let timer = 0;
+let timerInterval;
+
+// HEGE vadiúj sztorijai (Hordó méret, Pombär, Gofri, KRESZ bukás)
+const riddles = [
+    { 
+        q: "Mekkora pontosan HEGE fizikai kiterjedése jelenleg?", 
+        a: "Pontosan akkora, mint egy masszív, 200 literes fém olajoshordó, amit teletömtek gofrival és snackekkel.", 
+        alts: ["Kifejezetten vékony, szálkás testalkatú atléta.", "Átlagos magasságú és vékony dongájú kisfiú."] 
+    },
+    { 
+        q: "Miért fog HEGE garantáltan megbukni a KRESZ vizsgán?", 
+        a: "Mert szerinte az elsőbbségadás kötelező tábla csak egy javaslat, ha a hordó testével lendületet vesz a gofris felé.", 
+        alts: ["Mert nem tudja megkülönböztetni a jobb és bal oldalt.", "Mert elaludt a vizsga kellős közepén."] 
+    },
+    { 
+        q: "Hány zacskó Pombär macit képes HEGE elpusztítani egyetlen Roblox meccs alatt?", 
+        a: "Végtelenített mennyiséget! A billentyűzet gombjai közül is Pombär darabkák hullanak, miközben magába tömi.", 
+        alts: ["Egyet sem, mert utálja a krumplis rágcsálnivalókat.", "Fél zacskót, mert nagyon figyel a diétájára."] 
+    },
+    { 
+        q: "Mi a tökéletes gofri receptje HEGE szerint?", 
+        a: "Olyan vastag legyen, mint egy KRESZ könyv, és annyi nutella legyen rajta, ami elbírja egy hordó súlyát.", 
+        alts: ["Cukormentes, zabpelyhes, üresen fogyasztva.", "Sósan, sajttal és tejföllel eszi, mint a lángost."] 
+    },
+    { 
+        q: "Hogyan tölti ki HEGE a KRESZ teszt gyakorló kérdéseit?", 
+        a: "Bal kezében egy gofri, jobb kezében egy Pombär, a lábával meg a Robloxot nyomja, a tesztre meg rányomja a hordóhasát.", 
+        alts: ["Könyvtárban ülve, jegyzetelve, csendben tanulmányozza a jogszabályokat.", "Megkér egy igazi sofőrt, hogy töltse ki helyette."] 
+    },
+    {
+        q: "Mit tesz HEGE, ha elfogy a Pombär a házból?",
+        a: "Ilyen nincs. Egy ekkora hordóban mindig vannak elrejtve vésztartalékok a nehezebb Robloxos órákra.",
+        alts: ["Elmegy futni egy jót a friss levegőn.", "Inkább megiszik egy pohár sima vizet és lefekszik aludni."]
+    }
+];
+let currentRiddle = null;
+
+function setDifficulty(level) {
+    document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+    if(window.event) window.event.target.classList.add('active');
+
+    if (level === 'easy') {
+        currentConfig = { rows: 10, cols: 10, mines: 12, level: 'easy' };
+    } else if (level === 'medium') {
+        currentConfig = { rows: 16, cols: 16, mines: 36, level: 'medium' };
+    } else if (level === 'hard') {
+        currentConfig = { rows: 22, cols: 22, mines: 85, level: 'hard' };
+    }
+    newGame();
+}
+
+function startTimer() {
+    clearInterval(timerInterval);
+    timer = 0;
+    timerEl.textContent = "Idő: 0s";
+    timerInterval = setInterval(() => {
+        timer++;
+        timerEl.textContent = `Idő: ${timer}s`;
+    }, 1000);
+}
+
+function newGame() {
+    const { rows, cols, mines } = currentConfig;
+    board = [];
+    gameOver = false;
+    firstClick = true;
+    
+    if(currentConfig.level === 'hard') {
+        statusEl.textContent = "Vigyázz! Ezen a KRESZ vizsgán HEGE hordó méretű hibát fog ejteni!";
+    } else {
+        statusEl.textContent = "Az első kattintás most is biztonságos!";
+    }
+    
+    mineCountEl.textContent = `Aknák: ${mines}`;
+    
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+    boardEl.innerHTML = "";
+
+    clearInterval(timerInterval);
+    timerEl.textContent = "Idő: 0s";
+
+    // Segítség panel kezelése
+    if (currentConfig.level === 'easy') {
+        document.getElementById("cyber-helper").style.display = "block";
+        helperText.textContent = "Kattints a megnövelt pályán, hogy HEGE begurítsa a hordó testét és segítsen!";
+        helperOptions.innerHTML = "";
+    } else {
+        document.getElementById("cyber-helper").style.display = "none";
+    }
+
+    for (let r = 0; r < rows; r++) {
+        board[r] = [];
+        for (let c = 0; c < cols; c++) {
+            board[r][c] = {
+                mine: false,
+                revealed: false,
+                flagged: false,
+                adjacent: 0,
+                element: null
+            };
+
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+
+            cell.addEventListener("click", leftClick);
+            cell.addEventListener("contextmenu", rightClick);
+
+            board[r][c].element = cell;
+            boardEl.appendChild(cell);
+        }
+    }
+}
+
+function placeMines(startR, startC) {
+    const { rows, cols, mines } = currentConfig;
+    let placed = 0;
+    
+    while (placed < mines) {
+        let r = Math.floor(Math.random() * rows);
+        let c = Math.floor(Math.random() * cols);
+        
+        let isSafeZone = Math.abs(r - startR) <= 1 && Math.abs(c - startC) <= 1;
+
+        if (!board[r][c].mine && !isSafeZone) {
+            board[r][c].mine = true;
+            placed++;
+        }
+    }
+}
+
+function countAdjacents() {
+    const { rows, cols } = currentConfig;
+    const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (board[r][c].mine) continue;
+            let count = 0;
+            for (let [dr,dc] of dirs) {
+                let nr = r + dr, nc = c + dc;
+                if (nr>=0 && nr<rows && nc>=0 && nc<cols && board[nr][nc].mine) {
+                    count++;
+                }
+            }
+            board[r][c].adjacent = count;
+        }
+    }
+}
+
+function generateHelperQuestion() {
+    if (currentConfig.level !== 'easy' || gameOver) return;
+    
+    currentRiddle = riddles[Math.floor(Math.random() * riddles.length)];
+    helperText.textContent = currentRiddle.q;
+    helperOptions.innerHTML = "";
+
+    let choices = [currentRiddle.a, ...currentRiddle.alts];
+    choices.sort(() => Math.random() - 0.5);
+
+    choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.classList.add("helper-btn");
+        btn.textContent = choice;
+        btn.onclick = () => checkHelperAnswer(choice);
+        helperOptions.appendChild(btn);
+    });
+}
+
+function checkHelperAnswer(chosen) {
+    if (gameOver) return;
+
+    if (chosen === currentRiddle.a) {
+        const { rows, cols } = currentConfig;
+        let mineFound = false;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (board[r][c].mine && !board[r][c].flagged && !board[r][c].revealed) {
+                    board[r][c].flagged = true;
+                    board[r][c].element.innerHTML = '<span class="flag">🚩</span>';
+                    mineFound = true;
+                    helperText.textContent = `🍟 Jól ismered a Hordót! HEGE két Pombär roppanás és egy gofri között megjelölt egy aknát: sor ${r+1}, oszlop ${c+1}!`;
+                    break;
+                }
+            }
+            if (mineFound) break;
+        }
+
+        if (!mineFound) {
+            helperText.textContent = "HEGE elégedetten megveregeti a hordóhasát, elfogyott a gofri!";
+        }
+        helperOptions.innerHTML = "";
+        checkWin();
+    } else {
+        helperText.textContent = "❌ HEGE mérgesen rázza a Pombäres zacskót... A KRESZ-en is pont így fog megbukni! Próbáld újra!";
+    }
+}
+
+function leftClick(e) {
+    if (gameOver) return;
+    const r = parseInt(e.currentTarget.dataset.r, 10);
+    const c = parseInt(e.currentTarget.dataset.c, 10);
+
+    if (firstClick) {
+        firstClick = false;
+        placeMines(r, c);
+        countAdjacents();
+        startTimer();
+        statusEl.textContent = "Sok sikert a nagy területen!";
+        generateHelperQuestion();
+    }
+
+    reveal(r, c);
+}
+
+function rightClick(e) {
+    e.preventDefault();
+    if (gameOver || firstClick) return;
+    const r = parseInt(e.currentTarget.dataset.r, 10);
+    const c = parseInt(e.currentTarget.dataset.c, 10);
+    
+    let cell = board[r][c];
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    cell.element.innerHTML = cell.flagged ? '<span class="flag">🚩</span>' : "";
+}
+
+function reveal(r, c) {
+    r = Number(r);
+    c = Number(c);
+    const { rows, cols } = currentConfig;
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+    
+    let cell = board[r][c];
+    if (cell.revealed || cell.flagged) return;
+
+    cell.revealed = true;
+    cell.element.classList.add("revealed");
+
+    if (cell.mine) {
+        cell.element.classList.add("mine");
+        cell.element.textContent = "💣";
+        
+        if(currentConfig.level === 'hard') {
+            endGame("BUMM! HEGE hordóként tarolta le a KRESZ vizsgát és azonnal MEGBUKOTT! 🚗💥");
+        } else {
+            endGame("Bumm! Ráharaptál egy rejtett aknára gofri helyett... Vesztettél!");
+        }
+        return;
+    }
+
+    if (cell.adjacent > 0) {
+        cell.element.textContent = cell.adjacent;
+        cell.element.classList.add("n" + cell.adjacent);
+    } else {
+        const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+        for (let [dr,dc] of dirs) {
+            reveal(r + dr, c + dc);
+        }
+    }
+    checkWin();
+}
+
+function endGame(msg) {
+    gameOver = true;
+    statusEl.textContent = msg;
+    clearInterval(timerInterval);
+    revealAllMines();
+    helperText.textContent = "HEGE inkább begurult a spájzba egy kis extra Pombärért és gofriért, a KRESZ könyv meg repült a sarokba.";
+    helperOptions.innerHTML = "";
+}
+
+function revealAllMines() {
+    const { rows, cols } = currentConfig;
+    for (let r=0; r<rows; r++) {
+        for (let c=0; c<cols; c++) {
+            if (board[r][c].mine) {
+                board[r][c].element.classList.add("revealed","mine");
+                board[r][c].element.textContent = "💣";
+            }
+        }
+    }
+}
+
+function checkWin() {
+    const { rows, cols, mines } = currentConfig;
+    let revealedCount = 0;
+    for (let r=0; r<rows; r++) {
+        for (let c=0; c<cols; c++) {
+            if (board[r][c].revealed) revealedCount++;
+        }
+    }
+    if (revealedCount === (rows * cols) - mines) {
+        if(currentConfig.level === 'hard') {
+            endGame("🏆 APOCALYPSE! HEGE VALAHOGYAN ÁTMENT A KRESZ-EN! A hordó szabadon száguldhat a gofris felé!");
+        } else {
+            endGame("🏆 Nyertél! HEGE akkora örömében, mint egy hordó, megkínál egy virtuális Pombärrel!");
+        }
+    }
+}
+
+newGameBtn.addEventListener("click", newGame);
+newGame();
+</script>
+
+</body>
+</html>
